@@ -28,3 +28,7 @@ It also outputs the following four flags:
 
 ## Register File
 The register file contains 8 registers with 16 data bits each. 
+Registers can be read to the outputs A and B by providing the addresses of the registers that want to be read as the inputs Addr_A and Addr_B. 0b000 corresponds to R0, 0b001 corresponds to R1, etc. 
+Registers can be written to hold the value C at the next clock cycle, when the WE signal is 1. The address of the register to write to is the input Addr_C.
+
+![image](media/register_file.png)
