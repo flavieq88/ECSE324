@@ -2,6 +2,10 @@
 
 This is the design and implementation of a simple 16-bit processor, capable of executing simple instructions, using Logisim Evolution. It supports basic ALU operations, memory accesses and control flow operations.
 
+![image](media/cpu.png)
+
+The processor executes each instruction in five stages: fetch, decode, execute, memory and writeback. It also contains ROM and RAM components to store program instructions and program data. The CPU supports ALU operations, store, branch and load. The supported ALU operations are ADD, SUB, AND, OR, NOR, LSL, LSR, ASR and the supported branch conditions are EQ, NE, LT, LE, GT, GE. 
+
 ## Arithmetic and Logic Unit
 
 ![image](media/alu.png)
