@@ -1,5 +1,5 @@
 N: .word 4
-matrix: .short 5, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+matrix: .short 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
 vector: .space 32 // initialized to 0
 
 .global _start
@@ -29,10 +29,12 @@ loop:
 	
 	// update row and col
 	
+	SUB V7, A1, #1 // V7 stores N-1
+	
 	// moving up and right
 	CMP V4, #1 // if dir == 1
 	BNE downleft
-	SUB V7, A1, #1 // V7 stores N-1
+	
 	CMP V3, V7 // if col == n-1
 	BNE elseif1
 	// we're at the right edge, down and turn
