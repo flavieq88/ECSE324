@@ -1,5 +1,13 @@
 .global _start
+.equ PUSHBUTTON_ADDR, 0xFF200050
+
 _start:
+	B test_read_pb
+	
+	
+test_read_pb: // test read_PB_data_ASM
+	BL read_PB_data_ASM
+	B test_read_pb
 	
 	
 // Pushbutton drivers	
@@ -14,6 +22,8 @@ _start:
 // post- A1: indices of pressed pushbuttons based on one-hot encoding scheme
 read_PB_data_ASM:
 	PUSH {V1-V5}
+	LDR V1, =PUSHBUTTON_ADDR
+	LDR A1, [V1] // load contents of pushbutton data register. already one hot encoded!
 	POP {V1-V5}
 	BX LR
 	
