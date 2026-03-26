@@ -2,14 +2,20 @@
 .equ PUSHBUTTON_ADDR, 0xFF200050
 
 _start:
-	B test_read_pb
+	B test_is_pressed_data
+end:
+	B end
 	
-	
-test_read_pb: // test read_PB_data_ASM
+test_read: // test read_PB_data_ASM
 	BL read_PB_data_ASM
-	B test_read_pb
+	B test_read
 	
-	
+test_is_pressed_data:
+	MOV A1, #0x0004 // should only return 1 when PB2 is pressed
+	BL PB_data_is_pressed_ASM
+	B end
+
+
 // Pushbutton drivers	
 
 // One-hot encoding scheme:
@@ -33,6 +39,19 @@ read_PB_data_ASM:
 // post- A1: 0x00000001 if corresponding pushbutton is pressed, 0x00000000 if not
 PB_data_is_pressed_ASM:
 	PUSH {V1-V5}
+	LDR V1, =PUSHBUTTON_ADDR
+	LDR V2, [V1] // load contents of pushbutton data register
+	// just need to right shift V2 until the selected index is at the end
+loop_pb_data_is_pressed:
+	CMP A1, #0x0001 // check if chosen index has arrived to last bit yet
+	BEQ end_pb_data_is_pressed
+	// right shift pushbutton index and result
+	LSR A1, A1, #1
+	LSR V2, V2, #1
+	B loop_pb_data_is_pressed
+end_pb_data_is_pressed:
+	MOV A1, V2 // store result in A1 to return
+	AND A1, A1, #0x0001 // clean up rest of data
 	POP {V1-V5}
 	BX LR
 	
