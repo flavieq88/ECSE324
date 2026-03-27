@@ -50,24 +50,24 @@ HEX_clear_ASM:
 	LDR V2, =HEX0_ADDR // store the address of display
 	MOV V3, #0 // store the number of times to shift the byte to store at address
 	MOV V5, #0b00000000 // cleared HEX display
-loop_clear:
+loop_hex_clear:
 	CMP V1, #0x00000040 // stop once we reached past HEX5
-	BEQ end_clear
+	BEQ end_hex_clear
 	// test to see if this HEX index is a match
 	AND V4, A1, V1 // store bit mask for the HEX display index
 	CMP V1, V4
-	BNE end_hex_clear // skip this HEX display if not in A1
+	BNE end_loop_hex_clear // skip this HEX display if not in A1
 	// clear the HEX display at correct byte
 	STRB V5, [V2, V3]
-end_hex_clear:
+end_loop_hex_clear:
 	LSL V1, V1, #1 // left shift the index once
 	ADD V3, V3, #1 // add 4 to shift the bits to store next byte
 	CMP V1, #0x00000010 // check if we reached HEX4 to modify address
-	BNE loop_clear
+	BNE loop_hex_clear
 	LDR V2, =HEX4_ADDR // jump addresses
 	MOV V3, #0 // reset the bit shift counter
-	B loop_clear
-end_clear:
+	B loop_hex_clear
+end_hex_clear:
 	POP {V1-V5}
 	BX LR
 	
@@ -80,24 +80,24 @@ HEX_flood_ASM:
 	LDR V2, =HEX0_ADDR // store the address of display
 	MOV V3, #0 // store the number of times to shift the byte to store at address
 	MOV V5, #0b11111111 // flooded HEX display
-loop_flood:
+loop_hex_flood:
 	CMP V1, #0x00000040 // stop once we reached past HEX5
-	BEQ end_flood
+	BEQ end_hex_flood
 	// test to see if this HEX index is a match
 	AND V4, A1, V1 // store bit mask for the HEX display index
 	CMP V1, V4
-	BNE end_hex_flood // skip this HEX display if not in A1
+	BNE end_loop_hex_flood // skip this HEX display if not in A1
 	// flood the HEX display at correct byte
 	STRB V5, [V2, V3]
-end_hex_flood:
+end_loop_hex_flood:
 	LSL V1, V1, #1 // left shift the index once
 	ADD V3, V3, #1 // add 4 to shift the bits to store next byte
 	CMP V1, #0x00000010 // check if we reached HEX4 to modify address
-	BNE loop_flood 
+	BNE loop_hex_flood 
 	LDR V2, =HEX4_ADDR // jump addresses
 	MOV V3, #0 // reset the bit shift counter
-	B loop_flood
-end_flood:
+	B loop_hex_flood
+end_hex_flood:
 	POP {V1-V5}
 	BX LR
 	
@@ -110,26 +110,23 @@ HEX_write_ASM:
 	MOV V1, #0x00000001 // keep track of which HEX index we are at
 	LDR V2, =HEX0_ADDR // store the address of display
 	MOV V3, #0 // store the number of times to shift the byte to store at address
-loop_write:
+loop_hex_write:
 	CMP V1, #0x00000040 // stop once we reached past HEX5
-	BEQ end_write
+	BEQ end_hex_write
 	// test to see if this HEX index is a match
 	AND V4, A1, V1 // store bit mask for the HEX display index
 	CMP V1, V4
-	BNE end_hex_write // skip this HEX display if not in A1
+	BNE end_loop_hex_write // skip this HEX display if not in A1
 	// update the HEX display at correct byte
 	STRB A2, [V2, V3]
-end_hex_write:
+end_loop_hex_write:
 	LSL V1, V1, #1 // left shift the index once
 	ADD V3, V3, #1 // add 4 to shift the bits to store next byte
 	CMP V1, #0x00000010 // check if we reached HEX4 to modify address
-	BNE loop_write 
+	BNE loop_hex_write 
 	LDR V2, =HEX4_ADDR // jump addresses
 	MOV V3, #0 // reset the bit shift counter
-	B loop_write
-end_write:
+	B loop_hex_write
+end_hex_write:
 	POP {V1-V5}
 	BX LR
-
-
-	
