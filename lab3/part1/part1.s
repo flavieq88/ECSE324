@@ -17,9 +17,158 @@ HEX_CODES:
 
  
 _start:
+	// set up initial state
+	MOV V1, #0 // store the number of times message has changed 
+	MOV V2, #0 // store direction of movement: 0 for left, 1 for right
+	// clear everything
+	BL clear_HEX
+	BL write_HEX_COFFEE
+	BL write_HEX_CAFE5
+	BL write_HEX_CAB5
+	BL write_HEX_ACE
+	BL shift_HEX_left
+	BL shift_HEX_right
+
+poll_loop:
+	
+	B poll_loop
 	
 	
+// -------------------------- HELPERS --------------------------
+
+// Write COFFEE on the HEX displays
+write_HEX_COFFEE:
+	PUSH {LR, V1-V5}
+	LDR V1, =HEX_CODES
+	MOV A1, #0x0000020 // HEX5
+	LDRB A2, [V1, #0xC] // C
+	BL HEX_write_ASM
+	MOV A1, #0x0000010 // HEX4
+	LDRB A2, [V1] // 0
+	BL HEX_write_ASM
+	MOV A1, #0x000000C // HEX3 and HEX2
+	LDRB A2, [V1, #0xF] // F
+	BL HEX_write_ASM
+	MOV A1, #0x0000003 // HEX1 and HEX0
+	LDRB A2, [V1, #0xE] // E
+	BL HEX_write_ASM
+	POP {LR, V1-V5}
+	BX LR
 	
+// Write CAFE5 on the HEX displays, left justified
+write_HEX_CAFE5:
+	PUSH {LR, V1-V5}
+	LDR V1, =HEX_CODES
+	MOV A1, #0x0000020 // HEX5
+	LDRB A2, [V1, #0xC] // C
+	BL HEX_write_ASM
+	MOV A1, #0x0000010 // HEX4
+	LDRB A2, [V1, #0xA] // A
+	BL HEX_write_ASM
+	MOV A1, #0x0000008 // HEX3
+	LDRB A2, [V1, #0xF] // F
+	BL HEX_write_ASM
+	MOV A1, #0x0000004 // HEX2
+	LDRB A2, [V1, #0xE] // E
+	BL HEX_write_ASM
+	MOV A1, #0x0000002 // HEX1
+	LDRB A2, [V1, #0x5] // 5
+	BL HEX_write_ASM
+	MOV A1, #0x0000001 // HEX0
+	BL HEX_clear_ASM
+	POP {LR, V1-V5}
+	BX LR
+	
+// Write CAB5 on the HEX displays, left justified
+write_HEX_CAB5:
+	PUSH {LR, V1-V5}
+	LDR V1, =HEX_CODES
+	MOV A1, #0x0000020 // HEX5
+	LDRB A2, [V1, #0xC] // C
+	BL HEX_write_ASM
+	MOV A1, #0x0000010 // HEX4
+	LDRB A2, [V1, #0xA] // A
+	BL HEX_write_ASM
+	MOV A1, #0x0000008 // HEX3
+	LDRB A2, [V1, #0xB] // B
+	BL HEX_write_ASM
+	MOV A1, #0x0000004 // HEX2
+	LDRB A2, [V1, #0x5] // 5
+	BL HEX_write_ASM
+	MOV A1, #0x0000003 // HEX1 and HEX0
+	BL HEX_clear_ASM
+	POP {LR, V1-V5}
+	BX LR
+	
+// Write ACE on the HEX displays, left justified
+write_HEX_ACE:
+	PUSH {LR, V1-V5}
+	LDR V1, =HEX_CODES
+	MOV A1, #0x0000020 // HEX5
+	LDRB A2, [V1, #0xA] // A
+	BL HEX_write_ASM
+	MOV A1, #0x0000010 // HEX4
+	LDRB A2, [V1, #0xC] // C
+	BL HEX_write_ASM
+	MOV A1, #0x0000008 // HEX3
+	LDRB A2, [V1, #0xE] // E
+	BL HEX_write_ASM
+	MOV A1, #0x0000007 // HEX2, HEX1 and HEX0
+	BL HEX_clear_ASM
+	POP {LR, V1-V5}
+	BX LR
+	
+// Write nothing on the HEX displays
+clear_HEX:
+	PUSH {LR, V1-V5}
+	MOV A1, #0x000003F // all HEX displays
+	BL HEX_clear_ASM
+	POP {LR, V1-V5}
+	BX LR
+	
+// shift contents of HEX displays to the left
+shift_HEX_left:
+	PUSH {V1-V5}
+	LDR V1, =HEX0_ADDR
+	LDR V2, =HEX4_ADDR
+	LDRB V3, [V1] // get what is in HEX0 
+	LDRB V4, [V2, #1] // get what is in HEX5
+	STRB V4, [V1] // write HEX5 to HEX0
+	LDRB V5, [V1, #1] // get what is in HEX1
+	STRB V3, [V1, #1] // write HEX0 to HEX1
+	LDRB V3, [V1, #2] // get what is in HEX2
+	STRB V5, [V1, #2] // write HEX1 to HEX2
+	LDRB V5, [V1, #3] // get what is in HEX3
+	STRB V3, [V1, #3] // write HEX2 to HEX3
+	LDRB V3, [V2] // get what is in HEX4
+	STRB V5, [V2] // write HEX3 to HEX4
+	STRB V3, [V2, #1] // write HEX4 to HEX5
+	STRB V4, [V1] // write HEX5 to HEX0	
+	POP {V1-V5}
+	BX LR
+
+// shift contents of HEX displays to the right
+shift_HEX_right:
+	PUSH {V1-V5}
+	LDR V1, =HEX0_ADDR
+	LDR V2, =HEX4_ADDR
+	LDRB V3, [V1] // get what is in HEX0 
+	LDRB V4, [V2, #1] // get what is in HEX5
+	STRB V3, [V2, #1] // write HEX0 to HEX5
+	LDRB V3, [V1, #1] // get what is in HEX1
+	STRB V3, [V1] // write HEX1 to HEX0
+	LDRB V3, [V1, #2] // get what is in HEX2
+	STRB V3, [V1, #1] // write HEX2 to HEX1
+	LDRB V3, [V1, #3] // get what is in HEX3
+	STRB V3, [V1, #2] // write HEX3 to HEX2
+	LDRB V3, [V2] // get what is in HEX4
+	STRB V3, [V1, #3] // write HEX4 to HEX3
+	STRB V4, [V2] // write HEX5 to HEX4
+	POP {V1-V5}
+	BX LR
+	
+	
+
 // -------------------------- DRIVERS --------------------------
 
 // Slider switches driver
