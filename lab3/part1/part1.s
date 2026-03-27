@@ -20,24 +20,93 @@ _start:
 	// set up initial state
 	MOV V1, #0 // store the number of times message has changed 
 	MOV V2, #0 // store direction of movement: 0 for left, 1 for right
-	// clear everything
-	BL clear_HEX
-	BL write_HEX_COFFEE
-	BL write_HEX_CAFE5
-	BL write_HEX_CAB5
-	BL write_HEX_ACE
-	BL shift_HEX_left
-	BL shift_HEX_right
+	MOV V3, #0x00 // store pattern that is being displayed (initial switches state)
+	LDR V4, =0x3FF // 1023 for max LED count
+	BL write_HEX_C0FFEE // set HEX displays to COFFEE
+	MOV A1, V1 
+	BL write_LEDs_ASM // clear the LED displays
+	BL PB_clear_edgecp_ASM
+	BL disable_PB_INT_ASM
 
 poll_loop:
+	// check what text should be displayed
+	BL read_slider_switches_ASM
+	CMP A1, V3 // check if it has changed
+	BEQ done_write // skip to next step if message is not changed
+	
+	MOV V3, A1 // save new message as the previous message
+	CMP A1, #0x00
+	BEQ case_C0FFEE
+	CMP A1, #0x01
+	BEQ case_CAFE5
+	CMP A1, #0x02
+	BEQ case_CAb5
+	CMP A1, #0x04
+	BEQ case_ACE
+	
+	B invalid_switch // branches if nothing matches
+
+case_C0FFEE:
+	BL write_HEX_C0FFEE
+	MOV V1, #0 // reset LED message count
+	B done_write
+case_CAFE5:
+	BL write_HEX_CAFE5
+	MOV V1, #0 // reset LED message count
+	B done_write
+case_CAb5:
+	BL write_HEX_CAb5
+	MOV V1, #0 // reset LED message count
+	B done_write
+case_ACE:
+	BL write_HEX_ACE
+	MOV V1, #0 // reset LED message count
+	B done_write
+	
+done_write:
+	// now read edgecap pushbuttons
+	// read PB2 and to see if it has been pushed and released
+	MOV A1, #0x00000004
+	BL PB_edgecp_is_pressed_ASM
+	BNE read_PB3 // if equal to 0, did not get pressed and released
+	// otherwise, change direction
+	CMP V2, #0
+	MOVEQ V2, #1
+	MOVNE V2, #0
+	B done_PBs
+	
+read_PB3: 
+	// read PB3 and to see if it has been pushed and released
+	MOV A1, #0x00000008
+	BL PB_edgecp_is_pressed_ASM
+	BNE done_PBs // if equal to 0, did not get pressed and released
+	// otherwise, shift left or right
+	CMP V2, #0
+	BLEQ shift_HEX_left
+	BLNE shift_HEX_right
+	CMP V1, V4
+	ADDLT V1, V1, #1 // update number of rotations
+	BL PB_clear_edgecp_ASM // clear edgecapture registers after actions have been taken care of
+	
+done_PBs:
+	MOV A1, V1
+	BL write_LEDs_ASM // update LEDs display
+	B poll_loop
+	
+invalid_switch:
+	// reset LED count
+	BL clear_HEX // reset message display
+	MOV V1, #0 // reset LED message count
+	MOV A1, V1
+	BL write_LEDs_ASM // update LEDs display
 	
 	B poll_loop
 	
 	
 // -------------------------- HELPERS --------------------------
 
-// Write COFFEE on the HEX displays
-write_HEX_COFFEE:
+// Write C0FFEE on the HEX displays
+write_HEX_C0FFEE:
 	PUSH {LR, V1-V5}
 	LDR V1, =HEX_CODES
 	MOV A1, #0x0000020 // HEX5
@@ -79,8 +148,8 @@ write_HEX_CAFE5:
 	POP {LR, V1-V5}
 	BX LR
 	
-// Write CAB5 on the HEX displays, left justified
-write_HEX_CAB5:
+// Write CAb5 on the HEX displays, left justified
+write_HEX_CAb5:
 	PUSH {LR, V1-V5}
 	LDR V1, =HEX_CODES
 	MOV A1, #0x0000020 // HEX5
@@ -90,7 +159,7 @@ write_HEX_CAB5:
 	LDRB A2, [V1, #0xA] // A
 	BL HEX_write_ASM
 	MOV A1, #0x0000008 // HEX3
-	LDRB A2, [V1, #0xB] // B
+	LDRB A2, [V1, #0xB] // b
 	BL HEX_write_ASM
 	MOV A1, #0x0000004 // HEX2
 	LDRB A2, [V1, #0x5] // 5
@@ -166,7 +235,7 @@ shift_HEX_right:
 	STRB V4, [V2] // write HEX5 to HEX4
 	POP {V1-V5}
 	BX LR
-	
+
 	
 
 // -------------------------- DRIVERS --------------------------
@@ -267,8 +336,8 @@ HEX_write_ASM:
 	LDR V2, =HEX0_ADDR // store the address of display
 	MOV V3, #0 // store the number of times to shift the byte to store at address
 loop_hex_write:
-	CMP V1, #0x00000040 // stop once we reached past HEX5
-	BEQ end_hex_write
+	CMP V1, #0x00000020 // stop once we reached past HEX5
+	BGT end_hex_write
 	// test to see if this HEX index is a match
 	AND V4, A1, V1 // store bit mask for the HEX display index
 	CMP V1, V4
@@ -277,7 +346,7 @@ loop_hex_write:
 	STRB A2, [V2, V3]
 end_loop_hex_write:
 	LSL V1, V1, #1 // left shift the index once
-	ADD V3, V3, #1 // add 4 to shift the bits to store next byte
+	ADD V3, V3, #1 // add 1 to shift the bits to store next byte
 	CMP V1, #0x00000010 // check if we reached HEX4 to modify address
 	BNE loop_hex_write 
 	LDR V2, =HEX4_ADDR // jump addresses
