@@ -15,7 +15,7 @@ _start:
 	LDR V2, =TIMER_ADDR
 	LDR V3, =HEX_CODES
 	BL ARM_TIM_clear_INT_ASM
-	LDR A1, =050000000 // timeout = 1/(200MHz) x 50x10^6 = 0.25 sec
+	LDR A1, =50000000 // timeout = 1/(200MHz) x 50x10^6 = 0.25 sec
 	MOV A2, #0b011 // enable auto and enable bits
 	BL ARM_TIM_config_ASM
 	MOV A1, #0x00000001 // HEX0
