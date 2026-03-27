@@ -26,15 +26,14 @@ _start:
 	MOV A1, V1 
 	BL write_LEDs_ASM // clear the LED displays
 	BL PB_clear_edgecp_ASM
+	MOV A1, #0x3F
 	BL disable_PB_INT_ASM
+	
 
 poll_loop:
 	// check what text should be displayed
 	BL read_slider_switches_ASM
-	CMP A1, V3 // check if it has changed
-	BEQ done_write // skip to next step if message is not changed
 	
-	MOV V3, A1 // save new message as the previous message
 	CMP A1, #0x00
 	BEQ case_C0FFEE
 	CMP A1, #0x01
@@ -44,42 +43,56 @@ poll_loop:
 	CMP A1, #0x04
 	BEQ case_ACE
 	
-	B invalid_switch // branches if nothing matches
+	B case_invalid // branches if nothing matches
 
 case_C0FFEE:
+	CMP A1, V3 // check if message has changed
+	BEQ done_write
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
 	BL write_HEX_C0FFEE
 	MOV V1, #0 // reset LED message count
 	B done_write
 case_CAFE5:
+	CMP A1, V3 // check if message has changed
+	BEQ done_write
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
 	BL write_HEX_CAFE5
 	MOV V1, #0 // reset LED message count
 	B done_write
 case_CAb5:
+	CMP A1, V3 // check if message has changed
+	BEQ done_write
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
 	BL write_HEX_CAb5
 	MOV V1, #0 // reset LED message count
 	B done_write
 case_ACE:
+	CMP A1, V3 // check if message has changed
+	BEQ done_write
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
 	BL write_HEX_ACE
 	MOV V1, #0 // reset LED message count
 	B done_write
-	
+case_invalid:
+	MOV V3, A1 // save switch state as previous state
+	BL clear_HEX // reset message display
+	MOV V1, #0 // reset LED message count
+	MOV A1, V1
+	BL write_LEDs_ASM // update LEDs display
+
+
 done_write:
 	// now read edgecap pushbuttons
-	// read PB2 and to see if it has been pushed and released
-	MOV A1, #0x00000004
-	BL PB_edgecp_is_pressed_ASM
-	BNE read_PB3 // if equal to 0, did not get pressed and released
-	// otherwise, change direction
-	CMP V2, #0
-	MOVEQ V2, #1
-	MOVNE V2, #0
-	B done_PBs
 	
-read_PB3: 
 	// read PB3 and to see if it has been pushed and released
 	MOV A1, #0x00000008
 	BL PB_edgecp_is_pressed_ASM
-	BNE done_PBs // if equal to 0, did not get pressed and released
+	CMP A1, #1
+	BNE read_PB2 // if equal to 0, did not get pressed and released
 	// otherwise, shift left or right
 	CMP V2, #0
 	BLEQ shift_HEX_left
@@ -88,19 +101,24 @@ read_PB3:
 	ADDLT V1, V1, #1 // update number of rotations
 	BL PB_clear_edgecp_ASM // clear edgecapture registers after actions have been taken care of
 	
-done_PBs:
+read_PB2:
+	// read PB2 and to see if it has been pushed and released
+	MOV A1, #0x00000004
+	BL PB_edgecp_is_pressed_ASM
+	CMP A1, #1
+	BNE done_PBs // if equal to 0, did not get pressed and released
+	// otherwise, change direction
+	CMP V2, #0
+	MOVEQ V2, #1
+	MOVNE V2, #0
+	BL PB_clear_edgecp_ASM // clear edgecapture registers after actions have been taken care of
+
+done_PBs:	
 	MOV A1, V1
 	BL write_LEDs_ASM // update LEDs display
 	B poll_loop
 	
-invalid_switch:
-	// reset LED count
-	BL clear_HEX // reset message display
-	MOV V1, #0 // reset LED message count
-	MOV A1, V1
-	BL write_LEDs_ASM // update LEDs display
-	
-	B poll_loop
+
 	
 	
 // -------------------------- HELPERS --------------------------
