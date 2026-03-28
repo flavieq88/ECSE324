@@ -84,13 +84,45 @@ IDLE: // poll switches
 	B case_invalid // branches if nothing matches
 
 service_PBs:
+	LDR A1, =PB_int_flag // read the flag
+	LDR V5, [A1]
+	CMP V5, #0
+	BEQ check_timer // skip these if no interrupts
+	// reset flag
+	MOV V7, #0
+	STR V7, [A1]
 CHECK_PB0:
+	MOV V7, #0x1
+	ANDS V7, V7, V5 // check for KEY0
+	BEQ CHECK_PB1
+	// PB0 was pressed
+	B check_timer
 
 CHECK_PB1:
+	MOV V7, #0x2
+	ANDS V7, V7, V5 // check for KEY1
+	BEQ CHECK_PB2
+	// PB1 was pressed
+	B check_timer
 
 CHECK_PB2:
+	MOV V7, #0x4
+	ANDS V7, V7, V5 // check for KEY2
+	BEQ IS_PB3
+	// PB2 was pressed
+	// reverses direction of movement
+	CMP V2, #0
+	MOVEQ V2, #1
+	MOVNE V2, #0
+	B check_timer
 
-CHECK_PB3:
+IS_PB3:
+	// PB3 was pressed
+	// pause or resume character movement
+	CMP V1, #0
+	MOVEQ V1, #1
+	MOVNE V1, #0
+	B check_timer
 
 check_timer: 
 	LDR V5, =tim_int_flag // check the flag
