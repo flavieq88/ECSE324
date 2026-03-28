@@ -167,8 +167,14 @@ IS_PB3:
 	// PB3 was pressed
 	// pause or resume character movement
 	CMP V1, #0
+	// want to restart
 	MOVEQ V1, #1
+	BEQ update_LEDs
+	// want to pause
 	MOVNE V1, #0
+	// clear LEDs
+	MOV A1, #0b0000000000
+	BL write_LEDs_ASM
 	B check_timer
 
 check_timer: 
