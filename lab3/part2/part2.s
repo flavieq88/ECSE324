@@ -1,3 +1,6 @@
+PB_int_flag: .word 0x0
+tim_int_flag: .word 0x0
+
 .section .vectors, "ax"
 B _start            // reset vector
 B SERVICE_UND       // undefined instruction vector
@@ -29,6 +32,7 @@ HEX_CODES:
 
 .global _start
 
+
 _start:
     /* Set up stack pointers for IRQ and SVC processor modes */
     MOV R1, #0b11010010      // interrupts masked, MODE = IRQ
@@ -51,7 +55,9 @@ _start:
     MSR CPSR_c, R0
 	
 	// variables
-	
+	MOV V1, #1 // store if characters are moving
+	MOV V2, #0 // store direction of movement: 0 for left, 1 for right
+	MOV V3, #0x00 // store state for HEX display
 	
 	// clear all to start initial state
 	MOV A1, #0b0000111111
@@ -77,21 +83,64 @@ IDLE: // poll switches
 	
 	B case_invalid // branches if nothing matches
 
+service_PBs:
+CHECK_PB0:
+
+CHECK_PB1:
+
+CHECK_PB2:
+
+CHECK_PB3:
+
+check_timer: 
+	LDR V5, =tim_int_flag // check the flag
+	LDR V7, [V5]
+	CMP V7, #1 // 1 if interrupt happened
+	BNE IDLE
+	// if interrupt did happen, reset flag
+	MOV V7, #0
+	STR V7, [V5]
+	// check if characters are supposed to move
+	CMP V1, #1
+	BNE IDLE
+	// otherwise, make the characters rotate
+	CMP V2, #0
+	BLEQ shift_HEX_left
+	BLNE shift_HEX_right
+	B IDLE
+
 case_C0FFEE:
+	CMP A1, V3 // check if message has changed
+	BEQ service_PBs
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
 	BL write_HEX_C0FFEE
-	B IDLE
+	B service_PBs
 case_CAFE5:
+	CMP A1, V3 // check if message has changed
+	BEQ service_PBs
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
 	BL write_HEX_CAFE5
-	B IDLE
+	B service_PBs
 case_CAb5:
-	BL write_HEX_CAb5
+	CMP A1, V3 // check if message has changed
+	BEQ service_PBs
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
+	BL service_PBs
 	B IDLE
 case_ACE:
+	CMP A1, V3 // check if message has changed
+	BEQ service_PBs
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
 	BL write_HEX_ACE
-	B IDLE
+	B service_PBs
 case_invalid:
+	MOV V3, A1 // save switch state as previous state
 	BL clear_HEX // reset message display
-    B IDLE // This is where you write your main program task(s)
+    B service_PBs 
 
 CONFIG_GIC:
     PUSH {LR}
@@ -209,49 +258,27 @@ SERVICE_FIQ:
     B SERVICE_FIQ
 
 KEY_ISR:
-	PUSH {LR}
-    LDR R0, =0xFF200050    // base address of pushbutton KEY port
-    LDR R1, [R0, #0xC]     // read edge capture register
+	PUSH {LR, V1-V5}
+    LDR V1, =PB_EDGE_ADDR
+    LDR V2, =PB_int_flag
+    LDR V1, [V1] // read edge capture register
+    STR V1, [V2] // save in flag
     MOV R2, #0xF
-    STR R2, [R0, #0xC]     // clear the interrupt
-    LDR R0, =0xFF200020    // base address of HEX display
-CHECK_KEY0:
-    MOV R3, #0x1
-    ANDS R3, R3, R1        // check for KEY0
-    BEQ CHECK_KEY1
-    MOV R2, #0b00111111
-    STR R2, [R0]           // display "0"
-    B END_KEY_ISR
-CHECK_KEY1:
-    MOV R3, #0x2
-    ANDS R3, R3, R1        // check for KEY1
-    BEQ CHECK_KEY2
-    MOV R2, #0b00000110
-    STR R2, [R0]           // display "1"
-    B END_KEY_ISR
-CHECK_KEY2:
-    MOV R3, #0x4
-    ANDS R3, R3, R1        // check for KEY2
-    BEQ IS_KEY3
-    MOV R2, #0b01011011
-    STR R2, [R0]           // display "2"
-    B END_KEY_ISR
-IS_KEY3:
-    MOV R2, #0b01001111
-    STR R2, [R0]           // display "3"
-END_KEY_ISR:
-	POP {LR}
+    BL PB_clear_edgecp_ASM // clear the interrupt
+    POP {LR, V1-V5}
     BX LR
 	
 ARM_TIM_ISR:
-	PUSH {LR}
-	BL ARM_TIM_clear_INT_ASM // clear the interrupt
-	LDR R0, =0xFF200020    // base address of HEX display
-	MOV R2, #0b11111111
-    STR R2, [R0]           // display "8"
-END_ARM_TIM_ISR:
-	POP {LR}
+	PUSH {LR, V1-V5}
+    LDR V1, =tim_int_flag
+	MOV V2, #1
+    BL ARM_TIM_read_INT_ASM
+    STR V2, [V1] // write 1 into the flag
+    BL ARM_TIM_clear_INT_ASM // clear interrupt
+    POP {LR, V1-V5}
     BX LR
+
+	
 	
 
 // -------------------------- HELPERS --------------------------
