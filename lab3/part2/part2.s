@@ -30,6 +30,9 @@ HEX_CODES:
 
 .equ TIMER_ADDR, 0xFFFEC600 // address of A9 private timer
 
+RATES: 
+	.word 12500000, 25000000, 50000000, 100000000, 200000000 // 1/16, 1/8, 1/4, 1/2, 1 s 
+
 .global _start
 
 
@@ -58,10 +61,11 @@ _start:
 	MOV V1, #1 // store if characters are moving
 	MOV V2, #0 // store direction of movement: 0 for left, 1 for right
 	MOV V3, #0x00 // store state for HEX display
+	MOV V4, #2 // store the speed with 0 being fastest, 4 being slowest
 	
 	// clear all to start initial state
 	MOV A1, #0b0000111111
-	BL write_LEDs_ASM // clear the LED displays
+	BL write_LEDs_ASM // setup the LED displays
 	BL PB_clear_edgecp_ASM
 	BL ARM_TIM_clear_INT_ASM
 	LDR A1, =50000000 // timeout = 1/(200MHz) x 50x10^6 = 0.25 sec
@@ -91,29 +95,72 @@ service_PBs:
 	// reset flag
 	MOV V7, #0
 	STR V7, [A1]
+	
 CHECK_PB0:
 	MOV V7, #0x1
 	ANDS V7, V7, V5 // check for KEY0
 	BEQ CHECK_PB1
 	// PB0 was pressed
-	B check_timer
+	// check if paused
+	CMP V1, #1
+	BNE IDLE
+	// make movement slower 
+	CMP V4, #4
+	BEQ check_timer // don't do anything if already at min speed
+	ADD V4, V4, #1
+	LDR V7, =RATES
+	// configure timer to use new rate 
+	LDR A1, [V7, V4, LSL #2] // get new rate
+	MOV A2, #0b00000111 // enable interrupt, auto and enable bits
+	BL ARM_TIM_config_ASM
+	B update_LEDs
 
 CHECK_PB1:
 	MOV V7, #0x2
 	ANDS V7, V7, V5 // check for KEY1
 	BEQ CHECK_PB2
 	// PB1 was pressed
-	B check_timer
+	// check if paused
+	CMP V1, #1
+	BNE IDLE
+	// make movement faster
+	CMP V4, #0
+	BEQ check_timer // don't do anything if already at max speed
+	SUB V4, V4, #1
+	LDR V7, =RATES
+	// configure timer to use new rate 
+	LDR A1, [V7, V4, LSL #2] // get new rate
+	MOV A2, #0b00000111 // enable interrupt, auto and enable bits
+	BL ARM_TIM_config_ASM
+	B update_LEDs
 
+update_LEDs:
+	CMP V4, #0
+	LDREQ A1, =0b1111111111
+	CMP V4, #1
+	MOVEQ A1, #0b0011111111
+	CMP V4, #2
+	MOVEQ A1, #0b0000111111
+	CMP V4, #3
+	MOVEQ A1, #0b0000001111
+	CMP V4, #4
+	MOVEQ A1, #0b0000000011
+	BL write_LEDs_ASM
+	B check_timer
+	
 CHECK_PB2:
 	MOV V7, #0x4
 	ANDS V7, V7, V5 // check for KEY2
 	BEQ IS_PB3
 	// PB2 was pressed
+	// check if paused
+	CMP V1, #1
+	BNE IDLE
 	// reverses direction of movement
 	CMP V2, #0
 	MOVEQ V2, #1
 	MOVNE V2, #0
+	// update LEDs
 	B check_timer
 
 IS_PB3:
@@ -160,6 +207,7 @@ case_CAb5:
 	BEQ service_PBs
 	// otherwise if not changed
 	MOV V3, A1 // save new message as the previous message
+	BL write_HEX_CAb5
 	BL service_PBs
 	B IDLE
 case_ACE:
