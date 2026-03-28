@@ -33,6 +33,20 @@ HEX_CODES:
 RATES: 
 	.word 12500000, 25000000, 50000000, 100000000, 200000000 // 1/16, 1/8, 1/4, 1/2, 1 s 
 
+WORD_08: // characters for word 0x08
+	.byte 0b00000111, 0b00111111, 0b01110111, 0b01011110 // 7, 0, A, d
+	.byte 0b01101101, 0b00000111, 0b00111111, 0b00111111 // 5, 7, 0, 0
+	.byte 0b00000110, 0b01101101 // 1, 5
+.space 2 // endure memory aligned
+N_08: .word 10 // length of word 0x08
+
+WORD_10: // characters for word 0x10
+	.byte 0b00111001, 0b01110111, 0b01110001, 0b01111001 // C, A, F, E
+	.byte 0b00000000, 0b01111100, 0b01111001, 0b01111001 // space, b, E, E
+	.byte 0b01110001, 0b00000000, 0b00111001, 0b00111111 // F, space, C, 0
+	.byte 0b01110001, 0b01110001, 0b01111001, 0b01111001 // F, F, E, E
+N_10: .word 16 // length of word 0x10
+
 .global _start
 
 
@@ -62,6 +76,7 @@ _start:
 	MOV V2, #0 // store direction of movement: 0 for left, 1 for right
 	MOV V3, #0x00 // store state for HEX display
 	MOV V4, #2 // store the speed with 0 being fastest, 4 being slowest
+	MOV A4, #0 // store starting byte for long words
 	
 	// clear all to start initial state
 	MOV A1, #0b0000111111
@@ -84,9 +99,65 @@ IDLE: // poll switches
 	BEQ case_CAb5
 	CMP A1, #0x04
 	BEQ case_ACE
+	CMP A1, #0x08
+	BEQ case_08
+	CMP A1, #0x10
+	BEQ case_10
 	
 	B case_invalid // branches if nothing matches
 
+case_C0FFEE:
+	CMP A1, V3 // check if message has changed
+	BEQ service_PBs
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
+	BL write_HEX_C0FFEE
+	B service_PBs
+case_CAFE5:
+	CMP A1, V3 // check if message has changed
+	BEQ service_PBs
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
+	BL write_HEX_CAFE5
+	B service_PBs
+case_CAb5:
+	CMP A1, V3 // check if message has changed
+	BEQ service_PBs
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
+	BL write_HEX_CAb5
+	BL service_PBs
+	B IDLE
+case_ACE:
+	CMP A1, V3 // check if message has changed
+	BEQ service_PBs
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
+	BL write_HEX_ACE
+	B service_PBs
+case_08:
+	CMP A1, V3 // check if message has changed
+	BEQ service_PBs
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
+	MOV A4, #0 // write first 6 chars
+	MOV A1, A4
+	BL write_HEX_08
+	B service_PBs
+case_10:
+	CMP A1, V3 // check if message has changed
+	BEQ service_PBs
+	// otherwise if not changed
+	MOV V3, A1 // save new message as the previous message
+	MOV A4, #0 // write first 6 chars
+	MOV A1, A4
+	BL write_HEX_10
+	B service_PBs
+case_invalid:
+	MOV V3, A1 // save switch state as previous state
+	BL clear_HEX // reset message display
+    B service_PBs 
+	
 service_PBs:
 	LDR A1, =PB_int_flag // read the flag
 	LDR V5, [A1]
@@ -190,43 +261,73 @@ check_timer:
 	BNE IDLE
 	// otherwise, make the characters rotate
 	CMP V2, #0
-	BLEQ shift_HEX_left
-	BLNE shift_HEX_right
+	// check if it is a long word
+	BEQ case_shift_left
+	BNE case_shift_right
+
+case_shift_left:
+	// check if it is a long word
+	CMP V3, #0x08
+	BNE left_10
+	// if yes, shift left means the starting index is one bigger
+	ADD A4, A4, #1 // add one
+	// if went over the limit, go back to 0
+	LDR A3, =N_08
+	LDR A3, [A3]
+	CMP A4, A3
+	MOVGE A4, #0 // if over the limit
+	MOV A1, A4
+	BL write_HEX_08
+	B IDLE
+left_10:
+	CMP V3, #0x10
+	BNE short_word_left
+	// if yes, shift left means the starting index is one bigger
+	ADD A4, A4, #1 // add one
+	// if went over the limit, go back to 0
+	LDR A3, =N_10
+	LDR A3, [A3]
+	CMP A4, A3
+	MOVGE A4, #0 // if over the limit
+	MOV A1, A4
+	BL write_HEX_10
+	B IDLE
+short_word_left:	
+	BL shift_HEX_left
 	B IDLE
 
-case_C0FFEE:
-	CMP A1, V3 // check if message has changed
-	BEQ service_PBs
-	// otherwise if not changed
-	MOV V3, A1 // save new message as the previous message
-	BL write_HEX_C0FFEE
-	B service_PBs
-case_CAFE5:
-	CMP A1, V3 // check if message has changed
-	BEQ service_PBs
-	// otherwise if not changed
-	MOV V3, A1 // save new message as the previous message
-	BL write_HEX_CAFE5
-	B service_PBs
-case_CAb5:
-	CMP A1, V3 // check if message has changed
-	BEQ service_PBs
-	// otherwise if not changed
-	MOV V3, A1 // save new message as the previous message
-	BL write_HEX_CAb5
-	BL service_PBs
+case_shift_right:
+	// check if it is a long word
+	CMP V3, #0x08
+	BNE right_10
+	// if yes, shift right means the starting index is one smaller
+	SUB A4, A4, #1 // substract one
+	// if went under 0, go back to highest
+	LDR A3, =N_08
+	LDR A3, [A3]
+	CMP A4, #0
+	ADDLT A4, A4, A3
+	MOV A1, A4
+	BL write_HEX_08
 	B IDLE
-case_ACE:
-	CMP A1, V3 // check if message has changed
-	BEQ service_PBs
-	// otherwise if not changed
-	MOV V3, A1 // save new message as the previous message
-	BL write_HEX_ACE
-	B service_PBs
-case_invalid:
-	MOV V3, A1 // save switch state as previous state
-	BL clear_HEX // reset message display
-    B service_PBs 
+right_10:
+	CMP V3, #0x10
+	BNE short_word_right
+	// if yes, shift right means the starting index is one smaller
+	SUB A4, A4, #1 // substract one
+	// if went under 0, go back to highest
+	LDR A3, =N_10
+	LDR A3, [A3]
+	CMP A4, #0
+	ADDLT A4, A4, A3
+	MOV A1, A4
+	BL write_HEX_10
+	B IDLE
+short_word_right:
+	BL shift_HEX_right
+	B IDLE
+
+
 
 CONFIG_GIC:
     PUSH {LR}
@@ -450,6 +551,54 @@ write_HEX_ACE:
 	BL HEX_clear_ASM
 	POP {LR, V1-V5}
 	BX LR
+
+// Write 70Ad570015 on HEX displays, six characters starting from nth character
+// pre- A1: n'th character to start from (0 for beginning)
+write_HEX_08:
+	PUSH {LR, V1-V5}
+	MOV V4, A1 // store beginning index
+	LDR V1, =N_08 // number of characters total
+	LDR V1, [V1]
+	LDR V2, =WORD_08 // address of first byte
+	MOV V3, #0x00000020 // index of HEX, starting at 5
+loop_write_08:
+	CMP V3, #0x00000001 // CMP with HEX0
+	BLT done_write_HEX_08
+	MOV A1, V3
+	LDRB A2, [V2, V4] // load byte and write
+	BL HEX_write_ASM
+	LSR V3, V3, #1 // now deincrement HEX index
+	ADD V4, V4, #1 // add one to character index
+	CMP V4, V1 // reset to 0 if went over the character total
+	SUBGE V4, V4, V1
+	B loop_write_08
+done_write_HEX_08:
+	POP {LR, V1-V5}
+	BX LR
+
+// Write CAFE bEEF C0FFEE on HEX displays, six characters starting from nth character
+// pre- A1: n'th character to start from (0 for beginning)
+write_HEX_10:
+	PUSH {LR, V1-V5}
+	MOV V4, A1 // store beginning index
+	LDR V1, =N_10 // number of characters total
+	LDR V1, [V1]
+	LDR V2, =WORD_10 // address of first byte
+	MOV V3, #0x00000020 // index of HEX, starting at HEX5
+loop_write_10:
+	CMP V3, #0x00000001 // CMP with HEX0
+	BLT done_write_HEX_10
+	MOV A1, V3
+	LDRB A2, [V2, V4] // load byte and write
+	BL HEX_write_ASM
+	LSR V3, V3, #1 // now deincrement HEX index
+	ADD V4, V4, #1 // add one to character index
+	CMP V4, V1 // reset to 0 if went over the character total
+	SUBGE V4, V4, V1
+	B loop_write_10
+done_write_HEX_10:
+	POP {LR, V1-V5}
+	BX LR
 	
 // Write nothing on the HEX displays
 clear_HEX:
@@ -480,6 +629,7 @@ shift_HEX_left:
 	POP {V1-V5}
 	BX LR
 
+
 // shift contents of HEX displays to the right
 shift_HEX_right:
 	PUSH {V1-V5}
@@ -499,7 +649,8 @@ shift_HEX_right:
 	STRB V4, [V2] // write HEX5 to HEX4
 	POP {V1-V5}
 	BX LR
-	
+
+
 	
 // -------------------------- DRIVERS --------------------------
 
