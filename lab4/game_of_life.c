@@ -3,7 +3,9 @@
 * Implemented and working functionalities:
 *   - drawing lines
 *   - drawing rectangles
-*   - game logic initialization
+*   - game logic: initialization
+* 	- game logic: changing the playing field
+* 	- game logic: state update
 **/
 
 #define VGA_PIX_ADDR 0xC8000000
@@ -17,6 +19,8 @@
 	
 #define BACKGROUND 0xCD99 // color for background
 #define FILL 0x0000 // color for grid lines and filled rectangles
+#define CURSOR_ACTIVE 0x520A // cursor color on an active cell
+#define CURSOR_INACTIVE 0xFF5F // cursor color on an inactive cell
 	
 // DRIVERS 
 	
@@ -63,7 +67,19 @@ void VGA_clear_charbuff_ASM() {
 }
 
 // PS/2 driver
-int read_PS2_data_ASM(char *data);
+// Checks the RVALID bit in the PS/2 data register. If valid, data is read and stored
+// at the given address data and returns 1. Else, returns 0.
+int read_PS2_data_ASM(char *data) {
+	// pointer to memory mapped I/O for VGA
+	volatile unsigned char *addr = (volatile unsigned char*) PS2_ADDR;
+	int rvalid = (addr[1] >> 7) & 0x1; //get the 15th bit
+	if (rvalid == 0) {
+		return 0;
+	}
+	// get final byte of ps2 data and store in data
+	*data = *addr;
+	return 1;
+}
 
 
 // Fills pixels in a line from (x1, y1) to (x2, y2) in a horizontal or vertical line in the color c.
@@ -150,6 +166,7 @@ void GoL_fill_gridxy(int x, int y, short c) {
 	VGA_draw_rect(x1, y1, x2, y2, c);
 }
 
+// Fills grid locations (x, y) within range with color c if board[y][x] == 1.
 void GoL_draw_board(int board[12][16], short c) {
 	for (int x = 0; x < 16; x++) {
 		for (int y = 0; y < 12; y++) {
@@ -157,6 +174,32 @@ void GoL_draw_board(int board[12][16], short c) {
 				GoL_fill_gridxy(x, y, c); // fill rectangle if 1 in board
 			}
 		}
+	}
+}
+
+// Fills grid location (cx, cy) within range with cursor color.
+// Color of cursor depends on if the cell is active (1) or inactive (0).
+void GoL_draw_cursor(int board[12][16], int cx, int cy) {
+	if (cx < 0 || cx >= 16 || cy < 0 || cy >= 12) {
+		return; // invalid grid location
+	}
+	if (board[cy][cx] == 1) {
+		GoL_fill_gridxy(cx, cy, CURSOR_ACTIVE); // fill rectangle with active color if 1 in board
+	} else {
+		GoL_fill_gridxy(cx, cy, CURSOR_INACTIVE); // fill rectangle with active color if 1 in board
+	}
+}
+
+// Fills grid location (cx, cy) within range with normal color.
+// Color of cell depends on if the cell is active (1) or inactive (0).
+void GoL_erase_cursor(int board[12][16], int cx, int cy) {
+	if (cx < 0 || cx >= 16 || cy < 0 || cy >= 12) {
+		return; // invalid grid location
+	}
+	if (board[cy][cx] == 1) {
+		GoL_fill_gridxy(cx, cy, FILL); // fill rectangle with active color if 1 in board
+	} else {
+		GoL_fill_gridxy(cx, cy, BACKGROUND); // fill rectangle with active color if 1 in board
 	}
 }
 
@@ -181,8 +224,78 @@ int main() {
 		{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 		{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},					   
 	};
+	// intialize cursor position
+	int cx = 0;
+	int cy = 0;
 	
 	GoL_draw_board(GoLBoard, FILL);
+	GoL_draw_cursor(GoLBoard, cx, cy);
+	
+	char data; 
+	int read;
+	int process = 0;
+	
+	// infinite polling
+	while (1) {
+		// check user input
+		read = read_PS2_data_ASM(&data);
+		if (read) {
+			if (data == 0xF0) { // distinguish between make and break
+				process = 1;
+				continue;
+			}
+			if (!process) {
+				continue;
+			}
+			process = 0;
+			switch (data) {
+				case (0x1D): // W
+					// move cursor up (lower y)
+					if (cy > 0) {
+						GoL_erase_cursor(GoLBoard, cx, cy);
+						cy--;
+					}
+					break;
+				case (0x1C): // A
+					// move cursor left (lower x)
+					if (cx > 0) {
+						GoL_erase_cursor(GoLBoard, cx, cy);
+						cx--;
+					}
+					break;
+				case (0x1B): // S
+					// move cursor down (higher y)
+					if (cy < 11) {
+						GoL_erase_cursor(GoLBoard, cx, cy);
+						cy++;
+					}
+					break;
+				case (0x23): // D
+					// move cursor right (higher x)
+					if (cx < 15) {
+						GoL_erase_cursor(GoLBoard, cx, cy);
+						cx++;
+					}
+					break;
+				case (0x29): // space
+					// toggle state of current cursor grid location
+					if (GoLBoard[cy][cx] == 1) {
+						GoLBoard[cy][cx] = 0;
+					} else {
+						GoLBoard[cy][cx] = 1;
+					}
+					break;
+				default:
+					break;
+			}
+		}
+		
+		// draw updated board to user
+		GoL_draw_board(GoLBoard, FILL);
+		GoL_draw_cursor(GoLBoard, cx, cy);
+		
+	}
+	
 	
 	return 0;
 }

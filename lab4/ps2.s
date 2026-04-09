@@ -16,7 +16,7 @@ end:
 
 // PS/2 driver
 
-// Checkes the RVALID bit in the PS/2 data register. If valid, data is read and stored
+// Checks the RVALID bit in the PS/2 data register. If valid, data is read and stored
 // at the given address data and returns 1. Else, returns 0.
 // pre- A1: data address
 // post- A1: 0 if RVALID bit is invalid, 1 if valid
