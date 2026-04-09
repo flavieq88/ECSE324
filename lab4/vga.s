@@ -14,7 +14,7 @@ end:
 // VGA drivers
 
 // Draws a point on the screen at the specified (x, y) coordinates in the indicated color c.
-// Verifies that the given coordinates are valid (x in [0, 319] and y in [0, 239]
+// Verifies that the given coordinates are valid (x in [0, 319] and y in [0, 239]).
 // pre- A1: x coordinate 
 //      A2: y coordinate
 //      A3: c color 
@@ -72,7 +72,7 @@ VGA_clear_pixelbuff_ASM:
 	BX LR 
 	
 // Writes the ASCII code c to the screen at (x, y) coordinate.
-// Checks whether the coordinates supplied are valid.
+// Checks whether the coordinates supplied are valid (x in [0, 79], y in [0, 59]).
 // pre- A1: x coordinate 
 //      A2: y coordinate
 //      A3: c character 
