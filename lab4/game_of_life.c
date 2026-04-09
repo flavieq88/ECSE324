@@ -3,6 +3,7 @@
 * Implemented and working functionalities:
 *   - drawing lines
 *   - drawing rectangles
+*   - game logic initialization
 **/
 
 #define VGA_PIX_ADDR 0xC8000000
@@ -149,15 +150,40 @@ void GoL_fill_gridxy(int x, int y, short c) {
 	VGA_draw_rect(x1, y1, x2, y2, c);
 }
 
+void GoL_draw_board(int board[12][16], short c) {
+	for (int x = 0; x < 16; x++) {
+		for (int y = 0; y < 12; y++) {
+			if (board[y][x] == 1) {
+				GoL_fill_gridxy(x, y, c); // fill rectangle if 1 in board
+			}
+		}
+	}
+}
+
+// main program: game logic
 int main() {
 	VGA_clear_charbuff_ASM();
 	VGA_clear_pixelbuff_ASM();
 	GoL_draw_grid(FILL);
-	GoL_fill_gridxy(0, 0, 0x8720);
-	GoL_fill_gridxy(15, 11, 0x8720);
-	GoL_fill_gridxy(3, 4, 0x8720);
-	GoL_fill_gridxy(5, 11, 0x8720);
-	GoL_fill_gridxy(15, 1, 0x8720);
+	
+	// initialize the board
+	int GoLBoard[12][16] = {
+		{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+		{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+		{0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0},
+		{0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0},
+		{0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0},
+		{0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0},
+		{0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0},
+		{0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0},
+		{0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0},
+		{0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0},
+		{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+		{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},					   
+	};
+	
+	GoL_draw_board(GoLBoard, FILL);
+	
 	return 0;
 }
 
