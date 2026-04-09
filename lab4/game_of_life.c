@@ -256,7 +256,6 @@ void GoL_update_board(int board[12][16]) {
 					GoL_fill_gridxy(x, y, BACKGROUND); // erase cell to make it inactive
 				} else if (n == 2 || n == 3) {
 					// Any active cell with 2 or 3 active neighbors remains active.
-					board[y][x] = 1;
 				} else if (n >= 4) {
 					// Any active cell with 4 or more active neighbors becomes inactive.
 					board[y][x] = 0;
@@ -266,6 +265,7 @@ void GoL_update_board(int board[12][16]) {
 				if (n == 3) {
 					// Any inactive cell with exactly 3 active neighbors becomes active.
 					board[y][x] = 1;
+					GoL_fill_gridxy(x, y, FILL); // update cell to make it active
 				}
 			}
 		}
@@ -358,7 +358,6 @@ int main() {
 				case (0x31): // N
 					// update the GoLBoard to the next iteration
 					GoL_update_board(GoLBoard);
-					GoL_draw_board(GoLBoard, FILL); // update board to user
 				default:
 					break;
 			}
@@ -369,6 +368,3 @@ int main() {
 	
 	return 0;
 }
-
-
-
