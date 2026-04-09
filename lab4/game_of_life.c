@@ -149,7 +149,7 @@ void GoL_draw_grid(short c) {
 // Verifies that the grid location is valid (x in [0, 15], y in [0, 11]).
 void GoL_fill_gridxy(int x, int y, short c) {
 	if (x < 0 || x >= 16 || y < 0 || y >= 12) {
-		return; //invalid grid location
+		return; // invalid grid location
 	}
 	// compute the x1, y1, x2, y2 for rectangle fill
 	int x1 = x * ((MAX_PIX_X+1)/16) + 1;
@@ -172,7 +172,7 @@ void GoL_draw_board(int board[12][16], short c) {
 		for (int y = 0; y < 12; y++) {
 			if (board[y][x] == 1) {
 				GoL_fill_gridxy(x, y, c); // fill rectangle if 1 in board
-			}
+			} 
 		}
 	}
 }
@@ -200,6 +200,75 @@ void GoL_erase_cursor(int board[12][16], int cx, int cy) {
 		GoL_fill_gridxy(cx, cy, FILL); // fill rectangle with active color if 1 in board
 	} else {
 		GoL_fill_gridxy(cx, cy, BACKGROUND); // fill rectangle with active color if 1 in board
+	}
+}
+
+int num_neighbors(int board[12][16], int x, int y) {
+	if (x < 0 || x >= 16 || y < 0 || y >= 12) {
+		return -1; // invalid grid location
+	}
+	int n = 0;
+	// check all 8 neighbours around, add if active
+	if (x > 0 && y > 0) { // upper left
+		n += board[y-1][x-1];
+	}
+	if (y > 0) { // upper
+		n += board[y-1][x];
+	}
+	if (x < 15 && y > 0) { // upper right
+		n += board[y-1][x+1];
+	}
+	if (x > 0) { // left
+		n += board[y][x-1];
+	}
+	if (x < 15) { // right
+		n += board[y][x+1];
+	}
+	if (x > 0 && y < 11) { // lower left
+		n += board[y+1][x-1];
+	}
+	if (y < 11) { // lower
+		n += board[y+1][x];
+	}
+	if (x < 15 && y < 11) { // lower right
+		n += board[y+1][x+1];
+	}
+	return n;
+}
+
+void GoL_update_board(int board[12][16]) {
+	// create a copy of the current board
+	int prev[12][16];
+	for (int x = 0; x < 16; x++) {
+		for (int y = 0; y < 12; y++) {
+			prev[y][x] = board[y][x];
+		}
+	}
+	for (int x = 0; x < 16; x++) {
+		for (int y = 0; y < 12; y++) {
+			// get number of neighbours
+			int n = num_neighbors(prev, x, y);
+			// if cell was active
+			if (prev[y][x]) {
+				if (n == 0 || n == 1) {
+					// Any active cell with 0 or 1 active neighbors becomes inactive
+					board[y][x] = 0;
+					GoL_fill_gridxy(x, y, BACKGROUND); // erase cell to make it inactive
+				} else if (n == 2 || n == 3) {
+					// Any active cell with 2 or 3 active neighbors remains active.
+					board[y][x] = 1;
+				} else if (n >= 4) {
+					// Any active cell with 4 or more active neighbors becomes inactive.
+					board[y][x] = 0;
+					GoL_fill_gridxy(x, y, BACKGROUND); // erase cell to make it inactive
+				}
+			} else { // if cell was inactive
+				if (n == 3) {
+					// Any inactive cell with exactly 3 active neighbors becomes active.
+					board[y][x] = 1;
+				}
+			}
+		}
 	}
 }
 
@@ -284,18 +353,19 @@ int main() {
 					} else {
 						GoLBoard[cy][cx] = 1;
 					}
+					GoL_draw_board(GoLBoard, FILL); // update board to user
 					break;
+				case (0x31): // N
+					// update the GoLBoard to the next iteration
+					GoL_update_board(GoLBoard);
+					GoL_draw_board(GoLBoard, FILL); // update board to user
 				default:
 					break;
 			}
 		}
-		
-		// draw updated board to user
-		GoL_draw_board(GoLBoard, FILL);
+		// always show cursor
 		GoL_draw_cursor(GoLBoard, cx, cy);
-		
 	}
-	
 	
 	return 0;
 }
