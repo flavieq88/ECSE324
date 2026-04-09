@@ -1,11 +1,11 @@
 /**
 * Part 3: Game of Life
-* Implemented and working functionalities:
+* Implemented and working functionalities: everything
 *   - drawing lines
 *   - drawing rectangles
 *   - game logic: initialization
-* 	- game logic: changing the playing field
-* 	- game logic: state update
+*   - game logic: changing the playing field
+*   - game logic: state update
 **/
 
 #define VGA_PIX_ADDR 0xC8000000
@@ -302,22 +302,21 @@ int main() {
 	
 	char data; 
 	int read;
-	int process = 0;
+	int skip = 0;
 	
 	// infinite polling
 	while (1) {
 		// check user input
 		read = read_PS2_data_ASM(&data);
 		if (read) {
-			if (data == 0xF0) { // distinguish between make and break
-				process = 1;
+			if (skip) {
+				skip = 0;
 				continue;
 			}
-			if (!process) {
-				continue;
-			}
-			process = 0;
 			switch (data) {
+				case (0xF0): // break indicator
+					skip = 1;
+					continue;
 				case (0x1D): // W
 					// move cursor up (lower y)
 					if (cy > 0) {
