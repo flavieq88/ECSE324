@@ -60,3 +60,26 @@ I also producted a performance analysis for the program in part 2, to determine 
 
 
 ## Lab 4
+This lab consists of creating an interactive application of Conway's Game of Life, on the ARMv7 DE1-SoC board.
+
+I wrote assembly subrouttines for the VGA display (using both the pixel buffer and the character buffer) in [vga.s](lab4/vga.s) and for the PS/2 interface (to get keyboard user input) in [ps2.s](lab4/ps2.s).
+
+Finally, I wrote a program in C to draw the game board and for the game logic in [game_of_life.c](lab4/game_of_life.c). THe VGA is used to display the field of play, and the PS/2 input is used to toggle the state of grid locations and update the game state.
+
+![image](lab4/media/game_of_life.png)
+
+Game of Life rules: 
+- Any active cell with 0 or 1 active neighbours become inactive
+- Any active cell with 2 or 3 active neighbours remains active
+- Any active cell with 4 or more active neighbours becomes inactive
+- Any inactive cell with exactly 3 active neighbours becomes active
+
+User input: 
+- `w`: move the cursor up
+- `a`: move the cursor left
+- `s`: move the cursor down
+- `d`: move the cursor right
+- `spacebar`: toggle the state of the grid location where the cursor is located
+- `n`: update the state of all grid locations in the playing field
+
+Two performance analyses were produced. One report was on the game board display initialization (performance and number of data memory accesses for the VGA interface), and another report was on the game state update and display sequence (computational cost of a single game state update step and how the cost is divided across interactions with I/O, game logic, etc.).
