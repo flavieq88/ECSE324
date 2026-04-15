@@ -81,6 +81,7 @@ _start:
 	// clear all to start initial state
 	MOV A1, #0b0000111111
 	BL write_LEDs_ASM // setup the LED displays
+	BL write_HEX_C0FFEE
 	BL PB_clear_edgecp_ASM
 	BL ARM_TIM_clear_INT_ASM
 	LDR A1, =50000000 // timeout = 1/(200MHz) x 50x10^6 = 0.25 sec

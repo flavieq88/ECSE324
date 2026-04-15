@@ -42,6 +42,8 @@ Pushbuttons rotate the sequence and modify the direction of movement:
 
 LEDs display the number of times the sequences has been rotated, in binary, starting with 0 up to 1023. The count resets when the message changes.
 
+![image](lab3/media/part1.png)
+
 
 In part 2, I implemented an interactive rotating HEX display program using timers and interrupts in [part2.s](lab3/part2/part2.s).  
 This interactive display is similar to part 1, but the message rotates automatically, and changes direction or speed in response to pushbutton press and release.  
@@ -55,6 +57,8 @@ Pushbuttons modify the direction and rate of flow of characters:
 
 There are 5 rates, where the message moves one position every {1/16, 1/8, 1/4, 1/2, 1} seconds. The LEDs display the currect speed of movement relative to min and max. When paused, all LEDs are off. At maximum speed, all LEDs are lit.  
 The ARM A9 private timer is used to count time and interrupts are used for the pushbuttons. The switches are polled as interrupts are not supported for this peripheral.
+
+![image](lab3/media/part1.png)
 
 I also producted a performance analysis for the program in part 2, to determine the amount of time spent servicing interrupts versus running user code. The report can be found [here](lab3/261225197_FlavieQin_Lab3_report.pdf).
 
@@ -82,4 +86,4 @@ User input:
 - `spacebar`: toggle the state of the grid location where the cursor is located
 - `n`: update the state of all grid locations in the playing field
 
-Two performance analyses were produced. One report was on the game board display initialization (performance and number of data memory accesses for the VGA interface), and another report was on the game state update and display sequence (computational cost of a single game state update step and how the cost is divided across interactions with I/O, game logic, etc.).
+Two performance analyses were produced. One [report](lab4/reports/261225197_FlavieQin_Lab4_report_p3a.pdf) was on the game board display initialization (performance and number of data memory accesses for the VGA interface), and another [report](lab4/reports/261225197_FlavieQin_Lab4_report_p3b.pdf) was on the game state update and display sequence (computational cost of a single game state update step and how the cost is divided across interactions with I/O, game logic, etc.).
