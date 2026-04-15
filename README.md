@@ -58,7 +58,7 @@ Pushbuttons modify the direction and rate of flow of characters:
 There are 5 rates, where the message moves one position every {1/16, 1/8, 1/4, 1/2, 1} seconds. The LEDs display the currect speed of movement relative to min and max. When paused, all LEDs are off. At maximum speed, all LEDs are lit.  
 The ARM A9 private timer is used to count time and interrupts are used for the pushbuttons. The switches are polled as interrupts are not supported for this peripheral.
 
-![image](lab3/media/part1.png)
+![image](lab3/media/part2.png)
 
 I also producted a performance analysis for the program in part 2, to determine the amount of time spent servicing interrupts versus running user code. The report can be found [here](lab3/261225197_FlavieQin_Lab3_report.pdf).
 
