@@ -66,7 +66,7 @@ I also producted a performance analysis for the program in part 2, to determine 
 ## Lab 4
 This lab consists of creating an interactive application of Conway's Game of Life, on the ARMv7 DE1-SoC board.
 
-I wrote assembly subrouttines for the VGA display (using both the pixel buffer and the character buffer) in [vga.s](lab4/vga.s) and for the PS/2 interface (to get keyboard user input) in [ps2.s](lab4/ps2.s).
+I wrote assembly subroutines for the VGA display (using both the pixel buffer and the character buffer) in [vga.s](lab4/vga.s) and for the PS/2 interface (to get keyboard user input) in [ps2.s](lab4/ps2.s).
 
 Finally, I wrote a program in C to draw the game board and for the game logic in [game_of_life.c](lab4/game_of_life.c). THe VGA is used to display the field of play, and the PS/2 input is used to toggle the state of grid locations and update the game state.
 
